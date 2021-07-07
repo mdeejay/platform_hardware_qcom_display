@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -735,6 +735,18 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
   }
 }
 
+void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = idle_callback_.lock();
+  if (!callback) {
+    return;
+  }
+
+  if (hwc_display_[display]->IsDisplayIdle()) {
+    DTRACE_SCOPED();
+    callback->NotifyIdleStatus(true);
+  }
+}
+
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
@@ -783,6 +795,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
         status = hwc_display_[target_display]->Present(out_retire_fence);
         if (status == HWC2::Error::None) {
           PerformQsyncCallback(target_display);
+          PerformIdleStatusCallback(target_display);
         }
       }
     }
@@ -893,6 +906,14 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
     // Notfify all displays.
     NotifyClientStatus(client_connected_);
   }
+
+  // On SF stop, disable the idle time.
+  if (!pointer && is_idle_time_up_ && hwc_display_[HWC_DISPLAY_PRIMARY]) { // De-registering…
+    DLOGI("disable idle time");
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
+    is_idle_time_up_ = false;
+  }
+
   need_invalidate_ = false;
 }
 
@@ -1093,7 +1114,17 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   // async_powermode supported for power on and off
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display)) &&
                        async_power_mode_triggered_;
-  
+  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
+
+  if (last_power_mode == mode) {
+    return HWC2_ERROR_NONE;
+  }
+
+  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+    override_mode = false;
+  }
+
   if (!override_mode) {
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
@@ -1672,6 +1703,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = SetDisplayBrightnessScale(input_parcel);
+      break;
+
+    case qService::IQService::SET_STAND_BY_MODE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetStandByMode(input_parcel);
       break;
 
     default:
@@ -2478,6 +2517,21 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
   return android::NO_ERROR;
 }
 
+android::status_t HWCSession::SetStandByMode(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  bool enable = (input_parcel->readInt32() > 0);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("Primary display is not initialized");
+    return -EINVAL;
+  }
+
+  hwc_display_[HWC_DISPLAY_PRIMARY]->SetStandByMode(enable);
+
+  return android::NO_ERROR;
+}
+
 int HWCSession::CreatePrimaryDisplay() {
   int status = -EINVAL;
   HWDisplaysInfo hw_displays_info = {};
@@ -2953,10 +3007,6 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
     if (need_invalidate_) {
       callbacks_.Refresh(display);
       need_invalidate_ = false;
-    }
-
-    if (color_mgr_) {
-      color_mgr_->SetColorModeDetailEnhancer(hwc_display_[display]);
     }
   }
 
