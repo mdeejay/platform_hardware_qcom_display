@@ -57,6 +57,7 @@ enum {
   PRIV_FLAGS_CAMERA_READ = 0x00040000,
   PRIV_FLAGS_HW_TEXTURE = 0x00100000,
   PRIV_FLAGS_SECURE_DISPLAY = 0x01000000,
+  PRIV_FLAGS_TILE_RENDERED = 0x02000000,
   PRIV_FLAGS_UBWC_ALIGNED = 0x08000000,
   PRIV_FLAGS_UBWC_ALIGNED_PI = 0x40000000,  // PI format
 };
@@ -93,6 +94,8 @@ static const MetadataType MetadataType_CVPMetadata = {VENDOR_QTI, QTI_CVP_METADA
 static const MetadataType MetadataType_VideoHistogramStats = {VENDOR_QTI,
                                                               QTI_VIDEO_HISTOGRAM_STATS};
 
+static const MetadataType MetadataType_VideoTimestampInfo = {VENDOR_QTI, QTI_VIDEO_TS_INFO};
+
 static const MetadataType MetadataType_FD = {VENDOR_QTI, QTI_FD};
 
 static const MetadataType MetadataType_PrivateFlags = {VENDOR_QTI, QTI_PRIVATE_FLAGS};
@@ -112,6 +115,16 @@ static const MetadataType MetadataType_VendorMetadataStatus = {VENDOR_QTI,
 static const MetadataType MetadataType_BufferType = {VENDOR_QTI,
                                                      QTI_BUFFER_TYPE};
 
+static const MetadataType MetadataType_CustomDimensionsStride = {VENDOR_QTI,
+                                                                 QTI_CUSTOM_DIMENSIONS_STRIDE};
+
+static const MetadataType MetadataType_CustomDimensionsHeight = {VENDOR_QTI,
+                                                                 QTI_CUSTOM_DIMENSIONS_HEIGHT};
+
+static const MetadataType MetadataType_RgbDataAddress = {VENDOR_QTI, QTI_RGB_DATA_ADDRESS};
+
+static const MetadataType MetadataType_ColorSpace = {VENDOR_QTI, QTI_COLORSPACE};
+static const MetadataType MetadataType_YuvPlaneInfo = {VENDOR_QTI, QTI_YUV_PLANE_INFO};
 // 0 is also used as invalid value in standard metadata
 static const MetadataType MetadataType_Invalid = {VENDOR_QTI, 0};
 
@@ -139,6 +152,10 @@ Error decodeCVPMetadata(hidl_vec<uint8_t> &in, CVPMetadata *out);
 Error encodeCVPMetadata(CVPMetadata &in, hidl_vec<uint8_t> *out);
 Error decodeVideoHistogramMetadata(hidl_vec<uint8_t> &in, VideoHistogramMetadata *out);
 Error encodeVideoHistogramMetadata(VideoHistogramMetadata &in, hidl_vec<uint8_t> *out);
+Error decodeVideoTimestampInfo(hidl_vec<uint8_t> &in, VideoTimestampInfo *out);
+Error encodeVideoTimestampInfo(VideoTimestampInfo &in, hidl_vec<uint8_t> *out);
+Error decodeYUVPlaneInfoMetadata(hidl_vec<uint8_t> &in, qti_ycbcr *out);
+Error encodeYUVPlaneInfoMetadata(qti_ycbcr *in, hidl_vec<uint8_t> *out);
 }  // namespace qtigralloc
 
 #endif  //__QTIGRALLOC_H__

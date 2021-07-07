@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -55,6 +55,7 @@ enum ColorSpace_t {
   ITU_R_601,
   ITU_R_601_FR,
   ITU_R_709,
+  ITU_R_709_FR,
   ITU_R_2020,
   ITU_R_2020_FR,
 };
@@ -82,7 +83,8 @@ enum DispParamType {
     SET_SINGLE_BUFFER_MODE     = 0x4000,
     SET_S3D_COMP               = 0x8000,
     SET_CVP_METADATA           = 0x00010000,
-    SET_VIDEO_HISTOGRAM_STATS  = 0x00020000
+    SET_VIDEO_HISTOGRAM_STATS  = 0x00020000,
+    SET_VIDEO_TS_INFO          = 0x00040000
 };
 
 enum DispFetchParamType {
@@ -103,7 +105,8 @@ enum DispFetchParamType {
     GET_SINGLE_BUFFER_MODE    = 0x4000,
     GET_S3D_COMP              = 0x8000,
     GET_CVP_METADATA          = 0x00010000,
-    GET_VIDEO_HISTOGRAM_STATS = 0x00020000
+    GET_VIDEO_HISTOGRAM_STATS = 0x00020000,
+    GET_VIDEO_TS_INFO         = 0x00040000
 };
 
 /* Frame type bit mask */
